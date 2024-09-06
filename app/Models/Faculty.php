@@ -11,4 +11,19 @@ class Faculty extends Model
     use HasFactory, HasUuids;
 
     protected $guarded = ['id'];
+
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
+
+    public function programs()
+    {
+        return $this->hasMany(Program::class);
+    }
+
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
 }

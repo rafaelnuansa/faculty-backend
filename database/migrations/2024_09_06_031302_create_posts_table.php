@@ -20,6 +20,8 @@ return new class extends Migration
             $table->foreignUuid('faculty_id')->references('id')->on('faculties')->cascadeOnDelete();
             $table->text('content');
             $table->string('image');
+            $table->text('seo_description');
+            $table->text('seo_keywords');
             $table->timestamps();
         });
     }

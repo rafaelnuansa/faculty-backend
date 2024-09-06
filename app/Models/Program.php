@@ -11,4 +11,8 @@ class Program extends Model
     use HasFactory, HasUuids;
 
     protected $guarded = ['id'];
+    public function faculty()
+    {
+        return $this->belongsTo(Faculty::class);
+    }
 }

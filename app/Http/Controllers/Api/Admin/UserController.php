@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
@@ -17,16 +16,20 @@ class UserController extends Controller
      */
     public function index()
     {
-        //get users
-        $users = User::when(request()->search, function($users) {
-            $users = $users->where('name', 'like', '%'. request()->search . '%');
-        })->latest()->paginate(5);
+        // Get users with optional search functionality
+        $users = User::when(request()->search, function ($query) {
+            $query->where('name', 'like', '%' . request()->search . '%');
+        })->with('faculty')->latest()->paginate(10);
 
-        //append query string to pagination links
+        // Append query string to pagination links
         $users->appends(['search' => request()->search]);
 
-        //return with Api Resource
-        return new UserResource(true, 'List Data Users', $users);
+        // Return the list of users with pagination
+        return response()->json([
+            'success' => true,
+            'message' => 'List of Users',
+            'data' => $users
+        ]);
     }
 
     /**
@@ -37,114 +40,118 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
+        // Validate the request
         $validator = Validator::make($request->all(), [
-            'name'     => 'required',
-            'email'    => 'required|unique:users',
-            'password' => 'required|confirmed'
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:6|confirmed',
+            'faculty_id' => 'nullable|uuid|exists:faculties,id',
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors(),
+            ], 422);
         }
 
-        //create user
+        // Create a new user
         $user = User::create([
             'name'      => $request->name,
             'email'     => $request->email,
-            'password'  => bcrypt($request->password)
+            'password'  => bcrypt($request->password),
+            'faculty_id' => $request->faculty_id,
         ]);
 
-
-        if($user) {
-            //return success with Api Resource
-            return new UserResource(true, 'Data User Berhasil Disimpan!', $user);
-        }
-
-        //return failed with Api Resource
-        return new UserResource(false, 'Data User Gagal Disimpan!', null);
+        // Return success response
+        return response()->json([
+            'success' => true,
+            'message' => 'User created successfully!',
+            'data'    => $user,
+        ], 201);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param  int  $id
+     * @param  string  $id
      * @return \Illuminate\Http\Response
      */
     public function show($id)
     {
-        $user = User::whereId($id)->first();
+        // Find the user by ID
+        $user = User::find($id);
 
-        if($user) {
-            //return success with Api Resource
-            return new UserResource(true, 'Detail Data User!', $user);
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found!',
+            ], 404);
         }
 
-        //return failed with Api Resource
-        return new UserResource(false, 'Detail Data User Tidak DItemukan!', null);
+        // Return the user data
+        return response()->json([
+            'success' => true,
+            'message' => 'User details',
+            'data'    => $user,
+        ]);
     }
 
     /**
      * Update the specified resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
+     * @param  \App\Models\User  $user
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, User $user)
     {
+        // Validate the request
         $validator = Validator::make($request->all(), [
-            'name'     => 'required',
-            'email'    => 'required|unique:users,email,'.$user->id,
-            'password' => 'confirmed'
+            'name'      => 'required|string|max:255',
+            'email'     => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'password'  => 'nullable|string|min:6|confirmed',
+            'faculty_id' => 'nullable|uuid|exists:faculties,id',
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors(),
+            ], 422);
         }
 
-        if($request->password == "") {
+        // Update user details without changing password if it's not provided
+        $user->update([
+            'name'      => $request->name,
+            'email'     => $request->email,
+            'faculty_id' => $request->faculty_id,
+            'password'  => $request->password ? bcrypt($request->password) : $user->password,
+        ]);
 
-            //update user without password
-            $user->update([
-                'name'      => $request->name,
-                'email'     => $request->email,
-            ]);
-
-        } else {
-
-            //update user with new password
-            $user->update([
-                'name'      => $request->name,
-                'email'     => $request->email,
-                'password'  => bcrypt($request->password)
-            ]);
-
-        }
-
-
-        if($user) {
-            //return success with Api Resource
-            return new UserResource(true, 'Data User Berhasil Diupdate!', $user);
-        }
-
-        //return failed with Api Resource
-        return new UserResource(false, 'Data User Gagal Diupdate!', null);
+        // Return success response
+        return response()->json([
+            'success' => true,
+            'message' => 'User updated successfully!',
+            'data'    => $user,
+        ]);
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param  int  $id
+     * @param  \App\Models\User  $user
      * @return \Illuminate\Http\Response
      */
     public function destroy(User $user)
     {
-        if($user->delete()) {
-            //return success with Api Resource
-            return new UserResource(true, 'Data User Berhasil Dihapus!', null);
-        }
+        // Delete the user
+        $user->delete();
 
-        //return failed with Api Resource
-        return new UserResource(false, 'Data User Gagal Dihapus!', null);
+        // Return success response
+        return response()->json([
+            'success' => true,
+            'message' => 'User deleted successfully!',
+        ]);
     }
 }

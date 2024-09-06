@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Models\Faculty;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\FacultyResource;
 use Illuminate\Support\Facades\Validator;
 
 class FacultyController extends Controller
@@ -17,16 +16,20 @@ class FacultyController extends Controller
      */
     public function index()
     {
-        // Get faculties
+        // Get faculties with optional search functionality
         $faculties = Faculty::when(request()->search, function($query) {
-            $query->where('name', 'like', '%'. request()->search . '%');
-        })->latest()->paginate(5);
+            $query->where('name', 'like', '%' . request()->search . '%');
+        })->latest()->paginate(10);
 
         // Append query string to pagination links
         $faculties->appends(['search' => request()->search]);
 
-        // Return with Api Resource
-        return new FacultyResource(true, 'List Data Faculties', $faculties);
+        // Return the list of faculties with pagination
+        return response()->json([
+            'success' => true,
+            'message' => 'List of Faculties',
+            'data'    => $faculties
+        ]);
     }
 
     /**
@@ -37,18 +40,22 @@ class FacultyController extends Controller
      */
     public function store(Request $request)
     {
+        // Validate the request
         $validator = Validator::make($request->all(), [
-            'name'     => 'required',
-            'initial'  => 'required',
-            'desc'     => 'required',
-            'domain'   => 'required'
+            'name'     => 'required|string|max:255',
+            'initial'  => 'required|string',
+            'desc'     => 'required|string',
+            'domain'   => 'required|string|max:255'
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors(),
+            ], 422);
         }
 
-        // Create faculty
+        // Create a new faculty
         $faculty = Faculty::create([
             'name'     => $request->name,
             'initial'  => $request->initial,
@@ -56,8 +63,12 @@ class FacultyController extends Controller
             'domain'   => $request->domain
         ]);
 
-        // Return success with Api Resource
-        return new FacultyResource(true, 'Data Faculty Successfully Created!', $faculty);
+        // Return success response
+        return response()->json([
+            'success' => true,
+            'message' => 'Faculty created successfully!',
+            'data'    => $faculty,
+        ], 201);
     }
 
     /**
@@ -68,15 +79,22 @@ class FacultyController extends Controller
      */
     public function show($id)
     {
-        $faculty = Faculty::whereId($id)->first();
+        // Find the faculty by ID
+        $faculty = Faculty::find($id);
 
-        if ($faculty) {
-            // Return success with Api Resource
-            return new FacultyResource(true, 'Detail Data Faculty!', $faculty);
+        if (!$faculty) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Faculty not found!',
+            ], 404);
         }
 
-        // Return failed with Api Resource
-        return new FacultyResource(false, 'Data Faculty Not Found!', null);
+        // Return the faculty data
+        return response()->json([
+            'success' => true,
+            'message' => 'Faculty details',
+            'data'    => $faculty,
+        ]);
     }
 
     /**
@@ -88,24 +106,32 @@ class FacultyController extends Controller
      */
     public function update(Request $request, $id)
     {
+        // Validate the request
         $validator = Validator::make($request->all(), [
-            'name'     => 'required',
-            'initial'  => 'required',
-            'desc'     => 'required',
-            'domain'   => 'required'
+            'name'     => 'required|string|max:255',
+            'initial'  => 'required|string',
+            'desc'     => 'required|string',
+            'domain'   => 'required|string|max:255'
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors(),
+            ], 422);
         }
 
+        // Find the faculty by ID
         $faculty = Faculty::find($id);
 
         if (!$faculty) {
-            return new FacultyResource(false, 'Data Faculty Not Found!', null);
+            return response()->json([
+                'success' => false,
+                'message' => 'Faculty not found!',
+            ], 404);
         }
 
-        // Update faculty
+        // Update faculty details
         $faculty->update([
             'name'     => $request->name,
             'initial'  => $request->initial,
@@ -113,8 +139,12 @@ class FacultyController extends Controller
             'domain'   => $request->domain
         ]);
 
-        // Return success with Api Resource
-        return new FacultyResource(true, 'Data Faculty Successfully Updated!', $faculty);
+        // Return success response
+        return response()->json([
+            'success' => true,
+            'message' => 'Faculty updated successfully!',
+            'data'    => $faculty,
+        ]);
     }
 
     /**
@@ -125,14 +155,29 @@ class FacultyController extends Controller
      */
     public function destroy($id)
     {
+        // Find the faculty by ID
         $faculty = Faculty::find($id);
 
-        if ($faculty && $faculty->delete()) {
-            // Return success with Api Resource
-            return new FacultyResource(true, 'Data Faculty Successfully Deleted!', null);
+        if (!$faculty) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Faculty not found!',
+            ], 404);
         }
 
-        // Return failed with Api Resource
-        return new FacultyResource(false, 'Data Faculty Deletion Failed!', null);
+        // Delete the faculty
+        $faculty->delete();
+
+        // Return success response
+        return response()->json([
+            'success' => true,
+            'message' => 'Faculty deleted successfully!',
+        ]);
+    }
+
+
+    public function all(){
+        $faculty = Faculty::all();
+        return response()->json(['data' => $faculty]);
     }
 }
