@@ -44,5 +44,13 @@ Route::prefix('admin')->group(function () {
         Route::get('/categories/{category}', [App\Http\Controllers\Api\Admin\CategoryController::class, 'show']);
         Route::put('/categories/{category}', [App\Http\Controllers\Api\Admin\CategoryController::class, 'update']);
         Route::delete('/categories/{category}', [App\Http\Controllers\Api\Admin\CategoryController::class, 'destroy']);
+
+
+        // posts routes (replace apiResource)
+        Route::get('/posts', [App\Http\Controllers\Api\Admin\PostController::class, 'index']);
+        Route::post('/posts', [App\Http\Controllers\Api\Admin\PostController::class, 'store']);
+        Route::get('/posts/{post}', [App\Http\Controllers\Api\Admin\PostController::class, 'show']);
+        Route::put('/posts/{post}', [App\Http\Controllers\Api\Admin\PostController::class, 'update']);
+        Route::delete('/posts/{post}', [App\Http\Controllers\Api\Admin\PostController::class, 'destroy']);
   });
 });
