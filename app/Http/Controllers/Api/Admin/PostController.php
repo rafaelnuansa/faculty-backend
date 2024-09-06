@@ -6,6 +6,7 @@ use App\Models\Post;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str; // Import the Str class
 
 class PostController extends Controller
 {
@@ -18,8 +19,13 @@ class PostController extends Controller
     {
         // Get posts with pagination
         $posts = Post::latest()->paginate(10);
-        // Return posts as JSON
-        return response()->json($posts);
+
+        // Return posts as JSON with success, message, and data
+        return response()->json([
+            'success' => true,
+            'message' => 'Posts fetched successfully.',
+            'data' => $posts
+        ]);
     }
 
     /**
@@ -33,7 +39,6 @@ class PostController extends Controller
         // Validate request data
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
-            'slug' => 'required|string|unique:posts,slug',
             'category_id' => 'required|exists:categories,id',
             'user_id' => 'required|exists:users,id',
             'faculty_id' => 'required|exists:faculties,id',
@@ -42,17 +47,21 @@ class PostController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'data' => $validator->errors()
+            ], 422);
         }
 
         // Handle image upload
         $imageName = time().'.'.$request->image->extension();
         $request->image->move(public_path('images'), $imageName);
 
-        // Create post
+        // Create post with slug
         $post = Post::create([
             'title' => $request->title,
-            'slug' => $request->slug,
+            'slug' => Str::slug($request->title), // Generate slug from title
             'category_id' => $request->category_id,
             'user_id' => $request->user_id,
             'faculty_id' => $request->faculty_id,
@@ -61,7 +70,11 @@ class PostController extends Controller
         ]);
 
         // Return created post as JSON
-        return response()->json($post, 201);
+        return response()->json([
+            'success' => true,
+            'message' => 'Post created successfully.',
+            'data' => $post
+        ], 201);
     }
 
     /**
@@ -76,11 +89,19 @@ class PostController extends Controller
 
         if ($post) {
             // Return post as JSON
-            return response()->json($post);
+            return response()->json([
+                'success' => true,
+                'message' => 'Post fetched successfully.',
+                'data' => $post
+            ]);
         }
 
         // Return not found response
-        return response()->json(['message' => 'Post not found'], 404);
+        return response()->json([
+            'success' => false,
+            'message' => 'Post not found.',
+            'data' => null
+        ], 404);
     }
 
     /**
@@ -95,7 +116,6 @@ class PostController extends Controller
         // Validate request data
         $validator = Validator::make($request->all(), [
             'title' => 'sometimes|required|string|max:255',
-            'slug' => 'sometimes|required|string|unique:posts,slug,'.$id,
             'category_id' => 'sometimes|required|exists:categories,id',
             'user_id' => 'sometimes|required|exists:users,id',
             'faculty_id' => 'sometimes|required|exists:faculties,id',
@@ -104,13 +124,21 @@ class PostController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'data' => $validator->errors()
+            ], 422);
         }
 
         $post = Post::find($id);
 
         if (!$post) {
-            return response()->json(['message' => 'Post not found'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Post not found.',
+                'data' => null
+            ], 404);
         }
 
         // Handle image upload
@@ -120,10 +148,10 @@ class PostController extends Controller
             $post->image = $imageName;
         }
 
-        // Update post
+        // Update post with slug
         $post->update([
             'title' => $request->input('title', $post->title),
-            'slug' => $request->input('slug', $post->slug),
+            'slug' => Str::slug($request->input('title', $post->title)), // Update slug if title changes
             'category_id' => $request->input('category_id', $post->category_id),
             'user_id' => $request->input('user_id', $post->user_id),
             'faculty_id' => $request->input('faculty_id', $post->faculty_id),
@@ -132,7 +160,11 @@ class PostController extends Controller
         ]);
 
         // Return updated post as JSON
-        return response()->json($post);
+        return response()->json([
+            'success' => true,
+            'message' => 'Post updated successfully.',
+            'data' => $post
+        ]);
     }
 
     /**
@@ -148,10 +180,18 @@ class PostController extends Controller
         if ($post) {
             $post->delete();
             // Return success message
-            return response()->json(['message' => 'Post deleted successfully'], 200);
+            return response()->json([
+                'success' => true,
+                'message' => 'Post deleted successfully.',
+                'data' => null
+            ], 200);
         }
 
         // Return not found response
-        return response()->json(['message' => 'Post not found'], 404);
+        return response()->json([
+            'success' => false,
+            'message' => 'Post not found.',
+            'data' => null
+        ], 404);
     }
 }
