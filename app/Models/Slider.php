@@ -10,5 +10,5 @@ class Slider extends Model
 {
     use HasFactory, HasUuids;
 
-    protected $guraded = ['id'];
+    protected $guarded = ['id'];
 }

@@ -22,6 +22,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/dashboard', App\Http\Controllers\Api\Admin\DashboardController::class);
         //users
         Route::apiResource('/users', App\Http\Controllers\Api\Admin\UserController::class);
+        Route::apiResource('/faculties', App\Http\Controllers\Api\Admin\FacultyController::class);
 
     });
 });
